@@ -112,7 +112,13 @@ st.pydeck_chart(
             "html": "<b>{station_name}</b><br/>net: {net}",
             "style": {"color": "white"},
         },
-    )
+    ),
+    # Keying on the selected station forces the deck.gl component to remount when
+    # the selection changes, so it re-applies `initial_view_state` and actually
+    # flies to the station. Without this, deck.gl keeps its current camera across
+    # reruns and the "zoom to station" never moves the map. The key intentionally
+    # excludes the filters so panning/zooming survives slider changes.
+    key=f"deck-{selected_name}",
 )
 
 # --- Supporting charts ---
