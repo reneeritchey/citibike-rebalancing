@@ -1,4 +1,5 @@
 import sys
+import time
 from pathlib import Path
 
 # Streamlit puts the script's own folder (app/) on sys.path, not the repo root,
@@ -18,6 +19,7 @@ from src.metrics import (
     classify_stations,
     rebalancing_burden,
     cumulative_drift,
+    next_hour,
 )
 from app.layers import (
     net_to_color,
@@ -27,6 +29,7 @@ from app.layers import (
 )
 
 PROCESSED = ROOT / "data" / "processed" / "station_hour.parquet"
+ANIM_SPEED = 0.6  # seconds between animation frames
 
 st.set_page_config(page_title="Out of Balance — Citi Bike", layout="wide")
 
@@ -42,6 +45,31 @@ if not PROCESSED.exists():
 
 netflow = load_netflow()
 
+# --- Animation state ---
+st.session_state.setdefault("playing", False)
+st.session_state.setdefault("hour", 9)
+st.session_state.setdefault("_advance", False)
+
+
+def _toggle_play():
+    st.session_state.playing = not st.session_state.playing
+    if not st.session_state.playing:
+        st.session_state._advance = False
+
+
+def _pause_on_scrub():
+    # Manually dragging the scrubber pauses playback.
+    st.session_state.playing = False
+    st.session_state._advance = False
+
+
+# Advance the hour BEFORE the slider widget is created this run; Streamlit forbids
+# mutating a widget-keyed value after instantiation. `_advance` is set at the end
+# of the previous frame, so playback steps exactly one hour per rerun.
+if st.session_state._advance:
+    st.session_state.hour = next_hour(st.session_state.hour)
+    st.session_state._advance = False
+
 st.title("Out of Balance: NYC's Citi Bike Rebalancing Problem")
 st.caption(
     "Every trip moves one bike. Stations that chronically drain or overflow force "
@@ -53,7 +81,6 @@ st.sidebar.header("Filters")
 day_type = st.sidebar.radio("Day type", ["weekday", "weekend"], index=0)
 rider = st.sidebar.radio("Rider", ["all", "member", "casual"], index=0)
 min_trips = st.sidebar.slider("Minimum trips at station (per day)", 0, 50, 5)
-hour = st.sidebar.slider("Cumulative drift through hour", 0, 23, 9)
 
 picker_options = ["(none)"] + sorted(netflow["station_name"].dropna().unique().tolist())
 selected_name = st.sidebar.selectbox("Zoom to station", picker_options, index=0)
@@ -63,7 +90,34 @@ view = netflow[netflow["day_type"] == day_type]
 if rider != "all":
     view = view[view["member_casual"] == rider]
 
-# Cumulative drift through the chosen hour, per station.
+# --- KPI row (over the full day for the current filters) ---
+classified = classify_stations(view, threshold=10.0)
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Trips (avg/day)", f"{int(view['departures'].sum()):,}")
+k2.metric("Rebalancing burden (bikes/day)", f"{int(rebalancing_burden(view)):,}")
+k3.metric("Chronic drainers", int((classified["category"] == "drainer").sum()))
+k4.metric("Chronic fillers", int((classified["category"] == "filler").sum()))
+
+# --- Time playback row (directly above the map) ---
+st.markdown("#### Time of Day")
+pc1, pc2, pc3 = st.columns([1, 2, 6])
+pc1.button(
+    "⏸ Pause" if st.session_state.playing else "▶ Play",
+    use_container_width=True,
+    on_click=_toggle_play,
+)
+pc2.markdown(f"### {st.session_state.hour:02d}:00")
+pc3.slider(
+    "Cumulative drift through hour",
+    min_value=0,
+    max_value=23,
+    key="hour",
+    on_change=_pause_on_scrub,
+    label_visibility="collapsed",
+)
+hour = st.session_state.hour
+
+# --- Cumulative drift through the chosen hour, per station ---
 drift = cumulative_drift(view, up_to_hour=hour)
 activity = station_net(view)
 activity["volume"] = activity["arrivals"] + activity["departures"]
@@ -76,6 +130,7 @@ drift = drift.merge(coords, on="station_id", how="left")
 drift = drift[drift["volume"] >= min_trips]
 
 if drift.empty:
+    st.session_state.playing = False
     st.warning("No stations match these filters. Try lowering the minimum trips.")
     st.stop()
 
@@ -83,14 +138,6 @@ if drift.empty:
 max_abs = float(drift["net"].abs().max()) or 1.0
 drift["elevation"] = drift["net"].abs()
 drift["color"] = drift["net"].apply(lambda n: net_to_color(n, max_abs))
-
-# --- KPI row (over the full day for the current filters) ---
-classified = classify_stations(view, threshold=10.0)
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Trips (avg/day)", f"{int(view['departures'].sum()):,}")
-k2.metric("Rebalancing burden (bikes/day)", f"{int(rebalancing_burden(view)):,}")
-k3.metric("Chronic drainers", int((classified["category"] == "drainer").sum()))
-k4.metric("Chronic fillers", int((classified["category"] == "filler").sum()))
 
 # --- Map ---
 layers = [build_column_layer(drift)]
@@ -117,7 +164,7 @@ st.pydeck_chart(
     # the selection changes, so it re-applies `initial_view_state` and actually
     # flies to the station. Without this, deck.gl keeps its current camera across
     # reruns and the "zoom to station" never moves the map. The key intentionally
-    # excludes the filters so panning/zooming survives slider changes.
+    # excludes the hour so the camera stays fixed while the animation plays.
     key=f"deck-{selected_name}",
 )
 
@@ -189,5 +236,13 @@ with st.expander("How this works / methodology"):
         "- **Cumulative drift through hour H** sums each station's net flow for hours 0–H.\n"
         "- **Rebalancing burden** = sum of positive per-station net flow = the minimum "
         "bikes that must be moved to reset the system each day.\n"
+        "- Press ▶ Play to animate the map through the day; drag the hour scrubber to "
+        "pause and inspect any hour.\n"
         "- Data: Citi Bike public trip data, September 2024."
     )
+
+# --- Drive the animation: schedule the next frame ---
+if st.session_state.playing:
+    st.session_state._advance = True
+    time.sleep(ANIM_SPEED)
+    st.rerun()

@@ -11,6 +11,7 @@ from src.metrics import (
     classify_stations,
     rebalancing_burden,
     cumulative_drift,
+    next_hour,
 )
 
 
@@ -51,3 +52,10 @@ def test_cumulative_drift_accumulates_through_hour(sample_trips):
 
     assert drift.loc["A"] == -2.0
     assert drift.loc["B"] == 2.0
+
+
+def test_next_hour_increments_and_wraps():
+    assert next_hour(0) == 1
+    assert next_hour(8) == 9
+    assert next_hour(22) == 23
+    assert next_hour(23) == 0

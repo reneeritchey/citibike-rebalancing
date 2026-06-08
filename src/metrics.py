@@ -35,3 +35,8 @@ def cumulative_drift(netflow: pd.DataFrame, up_to_hour: int) -> pd.DataFrame:
     """Per-station net accumulated for all hours <= up_to_hour."""
     sliced = netflow[netflow["hour"] <= up_to_hour]
     return station_net(sliced)
+
+
+def next_hour(h: int) -> int:
+    """Advance an hour-of-day by one, wrapping 23 -> 0 (for animation looping)."""
+    return (h + 1) % 24
