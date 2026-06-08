@@ -20,6 +20,7 @@ from src.metrics import (
     rebalancing_burden,
     cumulative_drift,
     next_hour,
+    chronic_stations,
 )
 from app.layers import (
     net_to_color,
@@ -202,6 +203,51 @@ right.altair_chart(
     .properties(height=260),
     use_container_width=True,
 )
+
+# --- Chronic stations tables ---
+st.markdown("## Chronic Stations")
+_named = classified.merge(
+    coords[["station_id", "station_name"]], on="station_id", how="left"
+)
+_DISPLAY_COLS = {
+    "station_name": "Station",
+    "net": "Net (avg/day)",
+    "arrivals": "Arrivals (avg/day)",
+    "departures": "Departures (avg/day)",
+}
+
+
+def _chronic_table(category):
+    table = chronic_stations(_named, category)[list(_DISPLAY_COLS)].rename(
+        columns=_DISPLAY_COLS
+    )
+    return table.round(
+        {
+            "Net (avg/day)": 1,
+            "Arrivals (avg/day)": 1,
+            "Departures (avg/day)": 1,
+        }
+    )
+
+
+drainers_table = _chronic_table("drainer")
+fillers_table = _chronic_table("filler")
+
+dcol, fcol = st.columns(2)
+dcol.markdown(f"#### Drainers ({len(drainers_table)})")
+if drainers_table.empty:
+    dcol.info("No chronic drainers at the current filters.")
+else:
+    dcol.dataframe(
+        drainers_table, hide_index=True, use_container_width=True, height=360
+    )
+fcol.markdown(f"#### Fillers ({len(fillers_table)})")
+if fillers_table.empty:
+    fcol.info("No chronic fillers at the current filters.")
+else:
+    fcol.dataframe(
+        fillers_table, hide_index=True, use_container_width=True, height=360
+    )
 
 # --- Station drill-down ---
 if selected_name != "(none)":
