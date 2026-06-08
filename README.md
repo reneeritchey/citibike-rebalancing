@@ -3,7 +3,7 @@
 An interactive map of which Citi Bike stations chronically run empty or overflow,
 and how many bikes must be trucked around each day to reset the system.
 
-**Live demo:** _add Streamlit Community Cloud URL after deploy_
+
 
 <!-- After running the app, capture a screenshot of the map and save it to
 docs/screenshot.png, then uncomment the line below. -->
@@ -12,9 +12,9 @@ docs/screenshot.png, then uncomment the line below. -->
 ## The question
 Every trip moves exactly one bike, so each station accrues a net flow
 (arrivals − departures). Persistent imbalance forces Citi Bike to physically
-rebalance bikes — a real operational cost. This project maps and quantifies it
+rebalance bikes, resulting in additional operational costs. This project maps and quantifies it
 for September 2024. With the default filters, the system carries a rebalancing
-burden of roughly **4,300 bikes per weekday** across ~120 chronically imbalanced
+burden of roughly 4,300 bikes per weekday across 120 chronically imbalanced
 stations.
 
 ## Highlights
@@ -22,7 +22,7 @@ stations.
 - Hour slider animates cumulative daily drift toward rush hours
 - Weekday/weekend and member/casual filters
 - Searchable station picker that zooms to any station with a per-station drill-down
-- Headline metric: **daily rebalancing burden** (bikes that must be moved)
+- Headline metric: daily rebalancing burden (bikes that must be moved)
 
 ## Run locally
 ```bash
