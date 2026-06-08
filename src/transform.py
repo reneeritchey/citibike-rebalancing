@@ -50,3 +50,41 @@ def station_coords(df: pd.DataFrame) -> pd.DataFrame:
         lng=("lng", "median"),
     )
     return coords
+
+
+def _day_type(ts: pd.Series) -> pd.Series:
+    return ts.dt.dayofweek.map(lambda d: "weekend" if d >= 5 else "weekday")
+
+
+def station_hour_totals(df: pd.DataFrame) -> pd.DataFrame:
+    """Total arrivals/departures/net per station, hour-of-day, day_type, rider type.
+
+    Departures are bucketed at the start station by `started_at` hour;
+    arrivals at the end station by `ended_at` hour.
+    """
+    departures = pd.DataFrame(
+        {
+            "station_id": df["start_station_id"].values,
+            "hour": df["started_at"].dt.hour.values,
+            "day_type": _day_type(df["started_at"]).values,
+            "member_casual": df["member_casual"].values,
+            "arrivals": 0,
+            "departures": 1,
+        }
+    )
+    arrivals = pd.DataFrame(
+        {
+            "station_id": df["end_station_id"].values,
+            "hour": df["ended_at"].dt.hour.values,
+            "day_type": _day_type(df["ended_at"]).values,
+            "member_casual": df["member_casual"].values,
+            "arrivals": 1,
+            "departures": 0,
+        }
+    )
+    events = pd.concat([departures, arrivals], ignore_index=True)
+    totals = events.groupby(
+        ["station_id", "hour", "day_type", "member_casual"], as_index=False
+    ).agg(arrivals=("arrivals", "sum"), departures=("departures", "sum"))
+    totals["net"] = totals["arrivals"] - totals["departures"]
+    return totals
