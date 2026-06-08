@@ -1,4 +1,12 @@
+import sys
 from pathlib import Path
+
+# Streamlit puts the script's own folder (app/) on sys.path, not the repo root,
+# so make the repo root importable for the `src` and `app` packages regardless
+# of the working directory (local or Streamlit Community Cloud).
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import altair as alt
 import pandas as pd
@@ -18,7 +26,7 @@ from app.layers import (
     build_highlight_layer,
 )
 
-PROCESSED = Path("data/processed/station_hour.parquet")
+PROCESSED = ROOT / "data" / "processed" / "station_hour.parquet"
 
 st.set_page_config(page_title="Out of Balance — Citi Bike", layout="wide")
 
