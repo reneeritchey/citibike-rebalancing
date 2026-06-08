@@ -6,7 +6,12 @@ from src.transform import (
     day_counts,
     normalize_per_day,
 )
-from src.metrics import station_net, classify_stations
+from src.metrics import (
+    station_net,
+    classify_stations,
+    rebalancing_burden,
+    cumulative_drift,
+)
 
 
 def _netflow(sample_trips):
@@ -31,3 +36,18 @@ def test_classify_stations_labels_drainer_and_filler(sample_trips):
 
     assert classified.loc["A", "category"] == "drainer"
     assert classified.loc["B", "category"] == "filler"
+
+
+def test_rebalancing_burden_sums_positive_net(sample_trips):
+    netflow = _netflow(sample_trips)
+
+    assert rebalancing_burden(netflow) == 1.0
+
+
+def test_cumulative_drift_accumulates_through_hour(sample_trips):
+    netflow = _netflow(sample_trips)
+
+    drift = cumulative_drift(netflow, up_to_hour=8).set_index("station_id")["net"]
+
+    assert drift.loc["A"] == -2.0
+    assert drift.loc["B"] == 2.0

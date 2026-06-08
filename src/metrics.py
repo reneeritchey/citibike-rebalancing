@@ -23,3 +23,15 @@ def classify_stations(netflow: pd.DataFrame, threshold: float = 10.0) -> pd.Data
 
     totals["category"] = totals["net"].map(label)
     return totals
+
+
+def rebalancing_burden(netflow: pd.DataFrame) -> float:
+    """Minimum bikes to move to reset: sum of positive per-station net flow."""
+    net = station_net(netflow)["net"]
+    return float(net[net > 0].sum())
+
+
+def cumulative_drift(netflow: pd.DataFrame, up_to_hour: int) -> pd.DataFrame:
+    """Per-station net accumulated for all hours <= up_to_hour."""
+    sliced = netflow[netflow["hour"] <= up_to_hour]
+    return station_net(sliced)
