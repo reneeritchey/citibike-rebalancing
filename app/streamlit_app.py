@@ -134,7 +134,7 @@ left.altair_chart(
     alt.Chart(pulse)
     .mark_area(opacity=0.6)
     .encode(
-        x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=-90)),
+        x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("citywide_net:Q", title="Net Flow (bikes/day)"),
     )
     .properties(height=260),
@@ -173,7 +173,7 @@ if selected_name != "(none)":
     hourly = sel_rows.groupby("hour", as_index=False)["net"].sum()
     st.altair_chart(
         alt.Chart(hourly).mark_bar().encode(
-            x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=-90)),
+            x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=0)),
             y=alt.Y("net:Q", title="Net Flow (bikes/day)"),
             color=alt.condition("datum.net < 0", alt.value("#d6604d"), alt.value("#4393c3")),
         ).properties(height=240),
