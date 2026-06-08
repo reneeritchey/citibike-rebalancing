@@ -1,0 +1,7 @@
+pandas>=2.0
+pyarrow>=14.0
+requests>=2.31
+streamlit>=1.31
+pydeck>=0.8
+altair>=5.0
+pytest>=8.0
