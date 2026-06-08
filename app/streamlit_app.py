@@ -129,24 +129,27 @@ pulse = (
     .sum()
     .rename(columns={"net": "citywide_net"})
 )
-left.subheader("Citywide net flow by hour (the tidal pulse)")
+left.subheader("Citywide Net Flow by Hour (the Tidal Pulse)")
 left.altair_chart(
     alt.Chart(pulse)
     .mark_area(opacity=0.6)
-    .encode(x="hour:O", y="citywide_net:Q")
+    .encode(
+        x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=-90)),
+        y=alt.Y("citywide_net:Q", title="Net Flow (bikes/day)"),
+    )
     .properties(height=260),
     use_container_width=True,
 )
 
 top_drain = drift.nsmallest(10, "net")
 top_fill = drift.nlargest(10, "net")
-right.subheader("Top drainers (red) and fillers (blue)")
+right.subheader("Top Drainers (Red) and Fillers (Blue)")
 right.altair_chart(
     alt.Chart(pd.concat([top_drain, top_fill]))
     .mark_bar()
     .encode(
-        x="net:Q",
-        y=alt.Y("station_name:N", sort="-x", title="station"),
+        x=alt.X("net:Q", title="Net Flow (bikes/day)"),
+        y=alt.Y("station_name:N", sort="-x", title="Station"),
         color=alt.condition("datum.net < 0", alt.value("#d6604d"), alt.value("#4393c3")),
     )
     .properties(height=260),
@@ -155,7 +158,7 @@ right.altair_chart(
 
 # --- Station drill-down ---
 if selected_name != "(none)":
-    st.subheader(f"Station detail: {selected_name}")
+    st.subheader(f"Station Detail: {selected_name}")
     sel_id = coords[coords["station_name"] == selected_name]["station_id"].iloc[0]
     sel_rows = view[view["station_id"] == sel_id]
     s_net = station_net(sel_rows)["net"].iloc[0] if not sel_rows.empty else 0.0
@@ -170,8 +173,8 @@ if selected_name != "(none)":
     hourly = sel_rows.groupby("hour", as_index=False)["net"].sum()
     st.altair_chart(
         alt.Chart(hourly).mark_bar().encode(
-            x="hour:O",
-            y="net:Q",
+            x=alt.X("hour:O", title="Hour of Day", axis=alt.Axis(labelAngle=-90)),
+            y=alt.Y("net:Q", title="Net Flow (bikes/day)"),
             color=alt.condition("datum.net < 0", alt.value("#d6604d"), alt.value("#4393c3")),
         ).properties(height=240),
         use_container_width=True,
