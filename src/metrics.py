@@ -40,3 +40,15 @@ def cumulative_drift(netflow: pd.DataFrame, up_to_hour: int) -> pd.DataFrame:
 def next_hour(h: int) -> int:
     """Advance an hour-of-day by one, wrapping 23 -> 0 (for animation looping)."""
     return (h + 1) % 24
+
+
+def chronic_stations(classified: pd.DataFrame, category: str) -> pd.DataFrame:
+    """Rows of one category, sorted by net flow.
+
+    Drainers are sorted most-negative first; fillers most-positive first.
+    Input is the output of `classify_stations` (columns include `net` and
+    `category`). Returns the same columns; an empty frame if none match.
+    """
+    subset = classified[classified["category"] == category]
+    ascending = category == "drainer"
+    return subset.sort_values("net", ascending=ascending).reset_index(drop=True)
