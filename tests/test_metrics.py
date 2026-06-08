@@ -59,3 +59,29 @@ def test_next_hour_increments_and_wraps():
     assert next_hour(8) == 9
     assert next_hour(22) == 23
     assert next_hour(23) == 0
+
+
+def test_chronic_stations_filters_and_sorts():
+    from src.metrics import chronic_stations
+
+    classified = pd.DataFrame(
+        {
+            "station_id": ["A", "B", "C", "D"],
+            "arrivals": [1.0, 5.0, 2.0, 3.0],
+            "departures": [20.0, 1.0, 2.5, 30.0],
+            "net": [-19.0, 12.0, -0.5, -27.0],
+            "category": ["drainer", "filler", "balanced", "drainer"],
+        }
+    )
+
+    drainers = chronic_stations(classified, "drainer")
+    # only drainers, most-negative net first
+    assert list(drainers["station_id"]) == ["D", "A"]
+
+    fillers = chronic_stations(classified, "filler")
+    # only fillers, most-positive net first
+    assert list(fillers["station_id"]) == ["B"]
+
+    # a category with no matching rows -> empty frame
+    only_balanced = classified[classified["category"] == "balanced"]
+    assert chronic_stations(only_balanced, "drainer").empty
