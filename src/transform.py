@@ -88,3 +88,17 @@ def station_hour_totals(df: pd.DataFrame) -> pd.DataFrame:
     ).agg(arrivals=("arrivals", "sum"), departures=("departures", "sum"))
     totals["net"] = totals["arrivals"] - totals["departures"]
     return totals
+
+
+def day_counts(df: pd.DataFrame) -> dict:
+    """Number of distinct calendar dates of each day type, keyed by started_at."""
+    dates = pd.DataFrame(
+        {
+            "date": df["started_at"].dt.date,
+            "day_type": _day_type(df["started_at"]).values,
+        }
+    ).drop_duplicates()
+    counts = dates.groupby("day_type")["date"].nunique().to_dict()
+    counts.setdefault("weekday", 0)
+    counts.setdefault("weekend", 0)
+    return {"weekday": counts["weekday"], "weekend": counts["weekend"]}

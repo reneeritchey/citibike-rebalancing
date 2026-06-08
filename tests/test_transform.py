@@ -1,7 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from src.transform import clean_trips, station_coords, station_hour_totals
+from src.transform import (
+    clean_trips,
+    station_coords,
+    station_hour_totals,
+    day_counts,
+)
 
 
 def test_clean_trips_drops_null_coords_and_parses_timestamps(sample_trips):
@@ -45,3 +50,11 @@ def test_station_hour_totals_computes_net_flow(sample_trips):
     assert keyed.loc[("B", 8, "weekday", "member"), "net"] == 2
     assert keyed.loc[("B", 10, "weekend", "casual"), "net"] == -1
     assert keyed.loc[("A", 10, "weekend", "casual"), "net"] == 1
+
+
+def test_day_counts_counts_distinct_dates(sample_trips):
+    clean = clean_trips(sample_trips)
+
+    counts = day_counts(clean)
+
+    assert counts == {"weekday": 1, "weekend": 1}
