@@ -102,3 +102,15 @@ def day_counts(df: pd.DataFrame) -> dict:
     counts.setdefault("weekday", 0)
     counts.setdefault("weekend", 0)
     return {"weekday": counts["weekday"], "weekend": counts["weekend"]}
+
+
+def normalize_per_day(totals: pd.DataFrame, counts: dict) -> pd.DataFrame:
+    """Divide arrivals/departures/net by the number of days of each day type.
+
+    Produces average-per-day values so weekday and weekend rows are comparable.
+    """
+    result = totals.copy()
+    divisor = result["day_type"].map(counts).astype(float)
+    for col in ["arrivals", "departures", "net"]:
+        result[col] = result[col] / divisor
+    return result

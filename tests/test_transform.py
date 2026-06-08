@@ -6,6 +6,7 @@ from src.transform import (
     station_coords,
     station_hour_totals,
     day_counts,
+    normalize_per_day,
 )
 
 
@@ -58,3 +59,27 @@ def test_day_counts_counts_distinct_dates(sample_trips):
     counts = day_counts(clean)
 
     assert counts == {"weekday": 1, "weekend": 1}
+
+
+def test_normalize_per_day_divides_by_day_type_count():
+    totals = pd.DataFrame(
+        {
+            "station_id": ["A", "A"],
+            "hour": [8, 8],
+            "day_type": ["weekday", "weekend"],
+            "member_casual": ["member", "member"],
+            "arrivals": [0, 0],
+            "departures": [4, 2],
+            "net": [-4, -2],
+        }
+    )
+
+    result = normalize_per_day(totals, {"weekday": 2, "weekend": 1})
+    keyed = result.set_index(["station_id", "day_type"])
+
+    # 4 departures over 2 weekdays -> 2.0 per day; net -2.0
+    assert keyed.loc[("A", "weekday"), "departures"] == 2.0
+    assert keyed.loc[("A", "weekday"), "net"] == -2.0
+    # 2 departures over 1 weekend day -> 2.0 per day; unchanged
+    assert keyed.loc[("A", "weekend"), "departures"] == 2.0
+    assert keyed.loc[("A", "weekend"), "net"] == -2.0
